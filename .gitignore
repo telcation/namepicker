@@ -1,0 +1,17 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# PyCharm：共有する設定（.idea/*.xml, *.iml, runConfigurations）はコミットし、
+# 個人の作業状態だけを除外する
+.idea/workspace.xml
+.idea/shelf/
+.idea/usage.statistics.xml
+.idea/dataSources*
+.idea/httpRequests/
+.idea/copilot*
+
+# 実際の名簿をうっかりコミットしないための保険
+names*.txt
+!sample_names.txt

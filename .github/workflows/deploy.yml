@@ -1,0 +1,59 @@
+name: 自宅サーバーへデプロイ（namepicker）
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:        # GitHub の画面から手動実行もできる
+
+concurrency:
+  group: deploy-namepicker
+  cancel-in-progress: false
+
+env:
+  APP_DIR: /home/appuser/apps/namepicker
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v4
+
+      - name: Python の構文チェック
+        run: python -m py_compile app.py
+
+      - name: SSH 鍵を準備
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: ファイルをサーバーへ転送
+        run: |
+          rsync -az --delete \
+            --exclude '.git/' --exclude '.github/' --exclude '.idea/' \
+            --exclude 'venv/' --exclude '__pycache__/' \
+            --exclude 'sample_names.txt' --exclude 'deploy/' \
+            -e "ssh -i ~/.ssh/id_deploy -p ${{ secrets.SSH_PORT }}" \
+            ./ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${APP_DIR}/"
+
+      - name: 依存関係を更新して再起動
+        run: |
+          ssh -i ~/.ssh/id_deploy -p ${{ secrets.SSH_PORT }} \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" "bash -s -- ${APP_DIR}" <<'REMOTE'
+          set -e
+          cd "$1"
+          [ -d venv ] || python3 -m venv venv
+          venv/bin/pip install --quiet --upgrade pip
+          venv/bin/pip install --quiet -r requirements.txt
+          sudo /usr/bin/systemctl restart namepicker
+          sleep 2
+          sudo /usr/bin/systemctl is-active namepicker
+          curl -fsS http://127.0.0.1:5011/healthz && echo " ← 起動確認OK"
+          REMOTE
+
+      - name: 後片付け
+        if: always()
+        run: rm -f ~/.ssh/id_deploy

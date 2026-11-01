@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>名前ピッカー</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap">
+  <!-- 相対パスにしてあるので /namepicker/ のようなサブパス公開でも動きます -->
+  <link rel="stylesheet" href="static/style.css?v={{ v }}">
+  <script src="static/app.js?v={{ v }}" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>名前ピッカー</h1>
+    <div class="file-actions">
+      <button type="button" id="openBtn" class="btn btn-primary">名簿ファイルを開く</button>
+      <button type="button" id="closeBtn" class="btn" hidden>名簿を閉じる</button>
+      <input type="file" id="fileInput" accept=".txt,.csv,text/plain" hidden>
+    </div>
+  </header>
+
+  <!-- 名簿を読み込む前の画面 -->
+  <section id="emptyView" class="empty">
+    <div id="dropZone" class="drop-zone">
+      <p class="drop-main">ここに名簿ファイル（.txt）をドラッグ＆ドロップ</p>
+      <p>または「名簿ファイルを開く」を押して、ドキュメントフォルダから選びます。</p>
+      <p class="note">名前はこのブラウザの中だけで扱い、サーバーには送信・保存しません。<br>
+        ページを再読み込みするか閉じると、名簿は消えます。</p>
+    </div>
+    <p id="errorMsg" class="error" role="alert" hidden></p>
+  </section>
+
+  <!-- 名簿を読み込んだ後の画面 -->
+  <main id="mainView" class="main" hidden>
+    <section class="roster" aria-labelledby="rosterTitle">
+      <h2 id="rosterTitle">出欠</h2>
+      <p class="roster-help">名前を押すと欠席になります。もう一度押すと出席に戻ります。</p>
+      <p class="counts" id="counts" aria-live="polite"></p>
+      <ul id="rosterList" class="roster-list"></ul>
+      <button type="button" id="allPresentBtn" class="btn btn-small">全員を出席に戻す</button>
+      <p class="file-name" id="fileName"></p>
+    </section>
+
+    <section class="stage">
+      <div class="panel">
+        <h2>ランダムに1名</h2>
+        <div id="pickDisplay" class="pick-display" aria-live="assertive">―</div>
+        <div class="row">
+          <button type="button" id="pickBtn" class="btn btn-accent btn-large">1名を選ぶ</button>
+          <label class="check">
+            <input type="checkbox" id="excludePicked" checked>
+            選ばれた人は次から除く
+          </label>
+        </div>
+        <div class="history-wrap">
+          <p class="history-title">選ばれた順</p>
+          <ol id="historyList" class="history"></ol>
+          <button type="button" id="resetPickedBtn" class="btn btn-small">選ばれた記録を消す</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>ランダムに並び替え</h2>
+        <div class="row">
+          <button type="button" id="shuffleBtn" class="btn btn-primary btn-large">並び替える</button>
+        </div>
+        <ol id="shuffleList" class="shuffle-list"></ol>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

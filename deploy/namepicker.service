@@ -1,0 +1,15 @@
+# /etc/systemd/system/namepicker.service
+[Unit]
+Description=Name Picker (Flask / gunicorn, port 5011)
+After=network.target
+
+[Service]
+User=appuser
+Group=appuser
+WorkingDirectory=/home/appuser/apps/namepicker
+ExecStart=/home/appuser/apps/namepicker/venv/bin/gunicorn --workers 2 --bind 127.0.0.1:5011 app:app
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
