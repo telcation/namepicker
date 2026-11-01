@@ -60,6 +60,7 @@ Community 版・Professional 版のどちらでも動きます（Flask 専用の
 ### GitHub リポジトリにする
 
 1. 「VCS」→「バージョン管理統合を有効にする」→ Git
+   （メニューにこの項目が無い場合は、ターミナルで `git init -b main` を実行）
 2. 「Git」→「コミット」で全ファイルをコミット（`.github` と `.idea` の設定ファイルも含める）
 3. 「Git」→「GitHub」→「GitHub でプロジェクトを共有」でリポジトリを作成・プッシュ
 
@@ -67,22 +68,42 @@ Community 版・Professional 版のどちらでも動きます（Flask 専用の
 
 ## 2. サーバーの初回設定（1回だけ）
 
-`ssh home` で接続して実行します。
+`deploy/` フォルダのファイルは自動デプロイでは転送されません（サーバーの設定ファイルなので、手作業で1回だけ置きます）。
+
+### 2-1. 手元のPCからファイルを送る（PyCharm のターミナル）
+
+```powershell
+scp deploy\namepicker.service deploy\sudoers_namepicker deploy\nginx_namepicker.conf home:~/
+```
+
+`home` は SSH 設定（`~\.ssh\config`）の Host 名です。設定が無い場合は次のように指定します。
+
+```powershell
+scp -P <SSHポート> -i $HOME\.ssh\id_rsa_appuser deploy\namepicker.service deploy\sudoers_namepicker deploy\nginx_namepicker.conf appuser@telcation.f5.si:~/
+```
+
+### 2-2. サーバーで設定する（`ssh home` で接続）
 
 ```bash
 # アプリ置き場
 mkdir -p ~/apps/namepicker
 
 # systemd
-sudo cp namepicker.service /etc/systemd/system/      # deploy/namepicker.service を転送しておく
+sudo cp ~/namepicker.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable namepicker
 
-# 再起動の許可（GitHub Actions 用）
-sudo visudo -f /etc/sudoers.d/namepicker             # deploy/sudoers_namepicker の内容を貼り付け
+# 再起動の許可（GitHub Actions 用）。visudo -c で書式を確認してから置く
+sudo visudo -c -f ~/sudoers_namepicker \
+  && sudo install -m 440 -o root -g root ~/sudoers_namepicker /etc/sudoers.d/namepicker
 
-# nginx（server { listen 443 ... } に deploy/nginx_namepicker.conf の内容を追記）
+# nginx：既存サイト設定の server { listen 443 ssl; ... } の中に
+#        ~/nginx_namepicker.conf の内容を貼り付ける
+sudo nano /etc/nginx/sites-available/<telcation.f5.si の設定ファイル>
 sudo nginx -t && sudo systemctl reload nginx
+
+# 送ったファイルの片付け
+rm ~/namepicker.service ~/sudoers_namepicker ~/nginx_namepicker.conf
 ```
 
 初回デプロイが成功するまでは `systemctl start` はエラーになります（venv がまだ無いため）。
