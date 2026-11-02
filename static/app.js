@@ -73,10 +73,9 @@ async function loadFile(file) {
   state.absent.clear();
   state.picked = [];
   $('fileName').textContent = `読み込んだファイル：${file.name}`;
-  $('pickDisplay').textContent = '―';
-  $('pickDisplay').className = 'pick-display';
   $('shuffleList').replaceChildren();
   showMain(true);
+  setPickText('―'); // 画面を表示してから幅を測る
   renderAll();
 }
 
@@ -169,6 +168,31 @@ function hideError() {
   $('errorMsg').hidden = true;
 }
 
+// ---------------- 指名結果の表示（枠に1行で収まるよう文字サイズを自動調整） ----------------
+const MIN_PICK_FONT = 20; // px。これより小さくはしない
+
+function fitPickText() {
+  const el = $('pickDisplay');
+  el.classList.remove('is-wrap');
+  el.style.fontSize = '';                       // いったん CSS の最大サイズに戻す
+  const max = parseFloat(getComputedStyle(el).fontSize);
+  const available = el.clientWidth;
+  const needed = el.scrollWidth;                // 1行で表示したときに必要な幅
+  if (needed > available) {
+    const size = Math.max(MIN_PICK_FONT, Math.floor((max * available) / needed * 0.98));
+    el.style.fontSize = `${size}px`;
+    // 最小サイズでも入らない極端に長い名前だけは、切れて見えなくなるよりよいので折り返す
+    if (el.scrollWidth > el.clientWidth) el.classList.add('is-wrap');
+  }
+}
+
+function setPickText(text, state = '') {
+  const el = $('pickDisplay');
+  el.className = state ? `pick-display ${state}` : 'pick-display';
+  el.textContent = text;
+  fitPickText();
+}
+
 // ---------------- 機能1：ランダムに並び替え ----------------
 function doShuffle() {
   const list = shuffle(presentPeople());
@@ -189,11 +213,8 @@ function candidates() {
 async function doPick() {
   if (state.rolling) return;
   const pool = candidates();
-  const display = $('pickDisplay');
-
   if (pool.length === 0) {
-    display.className = 'pick-display';
-    display.textContent = '対象者がいません';
+    setPickText('対象者がいません');
     return;
   }
 
@@ -204,10 +225,9 @@ async function doPick() {
     // 名前が切り替わりながら、だんだん遅くなって止まる演出
     state.rolling = true;
     $('pickBtn').disabled = true;
-    display.className = 'pick-display is-rolling';
     let delay = 50;
     while (delay < 300) {
-      display.textContent = pool[randomInt(pool.length)].name;
+      setPickText(pool[randomInt(pool.length)].name, 'is-rolling');
       await new Promise((r) => setTimeout(r, delay));
       delay *= 1.15;
     }
@@ -215,8 +235,7 @@ async function doPick() {
     $('pickBtn').disabled = false;
   }
 
-  display.className = 'pick-display is-final';
-  display.textContent = winner.name;
+  setPickText(winner.name, 'is-final');
   state.picked.push(winner.id);
   renderHistory();
 }
@@ -246,10 +265,12 @@ document.addEventListener('DOMContentLoaded', () => {
   $('pickBtn').addEventListener('click', doPick);
   $('resetPickedBtn').addEventListener('click', () => {
     state.picked = [];
-    $('pickDisplay').textContent = '―';
-    $('pickDisplay').className = 'pick-display';
+    setPickText('―');
     renderHistory();
   });
+
+  // ウィンドウの大きさが変わったら、表示中の名前を合わせ直す
+  new ResizeObserver(() => fitPickText()).observe($('pickDisplay'));
 
   // ドラッグ＆ドロップ
   const zone = $('dropZone');
